@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   ArrowLeft, 
   Search, 
@@ -7,21 +7,14 @@ import {
   Clock, 
   Wrench, 
   Plus, 
-  Trash2, 
   Printer, 
   Send, 
   RotateCcw, 
-  Calendar, 
-  Phone, 
-  Car, 
   FileText, 
-  DollarSign, 
   ChevronRight, 
-  Info, 
-  AlertCircle,
   Package,
   Layers,
-  Sparkles
+  ClipboardList
 } from 'lucide-react';
 import { ServiceQueue, ServiceItem, ServiceStatus, Sparepart, Mechanic } from '../../types';
 import { INITIAL_SPAREPARTS, INITIAL_MECHANICS } from '../../data/mockData';
@@ -46,18 +39,17 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
   onAddQueue,
   onUpdateQueueStatus,
   onUpdateQueueItems,
-  onSelectQueueForInvoice,
   onResetDailyQueues,
   spareparts = INITIAL_SPAREPARTS,
   mechanics = INITIAL_MECHANICS
 }) => {
-  // Normalize initialTab to our 5 active sub-menus
+  // Normalize initialTab to our 5 active sub-menus (supporting both 'servis' and legacy 'service')
   const getNormalizedTab = (tab: string) => {
     if (tab === 'service-register' || tab === 'registrasi') return 'registrasi';
     if (tab === 'service-queue' || tab === 'antrian') return 'antrian';
-    if (tab === 'service-progress' || tab === 'proses-service') return 'proses-service';
-    if (tab === 'service-completed' || tab === 'selesai-service') return 'selesai-service';
-    if (tab === 'service-total' || tab === 'total-service') return 'total-service';
+    if (tab === 'service-progress' || tab === 'proses-service' || tab === 'proses-servis') return 'proses-servis';
+    if (tab === 'service-completed' || tab === 'selesai-service' || tab === 'selesai-servis') return 'selesai-servis';
+    if (tab === 'service-total' || tab === 'total-service' || tab === 'total-servis') return 'total-servis';
     return 'antrian';
   };
 
@@ -66,7 +58,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Modals for Proses Service actions
+  // Modals for Proses Servis actions
   const [selectedQueueForAction, setSelectedQueueForAction] = useState<ServiceQueue | null>(null);
   const [isAddPartModalOpen, setIsAddPartModalOpen] = useState(false);
   const [isAddLaborModalOpen, setIsAddLaborModalOpen] = useState(false);
@@ -75,11 +67,11 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
   const [laborName, setLaborName] = useState<string>('');
   const [laborPrice, setLaborPrice] = useState<number>(35000);
 
-  // Modal for Invoice (Selesai Service)
+  // Modal for Invoice (Selesai Servis)
   const [invoiceQueue, setInvoiceQueue] = useState<ServiceQueue | null>(null);
   const [showDailyResetConfirm, setShowDailyResetConfirm] = useState(false);
 
-  // Form State for "Registrasi" (Minimalist underline styling in Full Screen mode)
+  // Form State for "Registrasi" (List ke bawah tanpa contoh cara isi)
   const [regPlate, setRegPlate] = useState('');
   const [regCustomerName, setRegCustomerName] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -114,20 +106,20 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
           title: 'Antrian',
           subtitle: 'Daftar Menunggu Servis'
         };
-      case 'proses-service':
+      case 'proses-servis':
         return {
-          title: 'Proses Service',
+          title: 'Proses Servis',
           subtitle: 'Pengerjaan Teknisi Aktif'
         };
-      case 'selesai-service':
+      case 'selesai-servis':
         return {
-          title: 'Selesai Service',
+          title: 'Selesai Servis',
           subtitle: 'Unit Selesai & Cetak Nota / WA'
         };
-      case 'total-service':
+      case 'total-servis':
         return {
-          title: 'Total Service',
-          subtitle: 'Rekap Log Semua Servis Hari Ini'
+          title: 'Total Servis',
+          subtitle: 'Rekap Semua Servis Hari Ini'
         };
       default:
         return {
@@ -139,14 +131,13 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
 
   const headerMeta = getHeaderMeta();
 
-  // Filter queues by active sub-menu and search term
+  // Filter queues by status
   const waitingQueues = queues.filter((q) => q.status === 'menunggu');
   const inProgressQueues = queues.filter((q) => q.status === 'proses');
   const completedQueues = queues.filter((q) => q.status === 'selesai');
 
-  // Total Service filtered by today's date (Daily Reset Rule)
+  // Total Servis filtered by today's date
   const todayTotalQueues = queues.filter((q) => {
-    // If q has date property, match today. If no date, consider it today's queue
     if (q.date) {
       return q.date === todayDateStr;
     }
@@ -186,13 +177,13 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
       queueNumber: nextQueueNumber,
       plateNumber: regPlate.trim().toUpperCase(),
       customerName: regCustomerName.trim(),
-      customerPhone: regPhone.trim() || '081234567890',
-      vehicleModel: regVehicleModel.trim() || 'Motor Honda / Yamaha',
+      customerPhone: regPhone.trim() || '-',
+      vehicleModel: regVehicleModel.trim() || 'Motor',
       vehicleType: regVehicleType,
       serviceCategory: regCategory,
       mechanicName: regMechanic,
       status: 'menunggu',
-      complaint: regComplaint.trim() || 'Pemeriksaan rutin dan servis berkala.',
+      complaint: regComplaint.trim() || 'Servis dan pemeriksaan unit.',
       timeIn: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
       date: todayDateStr,
       estimatedCompletion: regEstimatedTime,
@@ -215,20 +206,17 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
     setRegComplaint('');
 
     showToast(`Unit ${newQueueItem.plateNumber} berhasil didaftarkan ke Antrian!`);
-
-    // Automated flow: Automatically route into Antrian sub-menu
     setActiveTab('antrian');
   };
 
-  // 2. ANTRIAN: Process / Kerjakan -> Auto moves to Proses Service
+  // 2. ANTRIAN: Process / Kerjakan -> Auto moves to Proses Servis
   const handleStartProcess = (queue: ServiceQueue) => {
     onUpdateQueueStatus(queue.id, 'proses', 35);
-    showToast(`Unit ${queue.plateNumber} mulai dikerjakan! Pindah ke Proses Service.`);
-    // Automated flow: Automatically move to Proses Service sub-menu
-    setActiveTab('proses-service');
+    showToast(`Unit ${queue.plateNumber} mulai dikerjakan! Pindah ke Proses Servis.`);
+    setActiveTab('proses-servis');
   };
 
-  // 3. PROSES SERVICE: Add Part
+  // 3. PROSES SERVIS: Add Part
   const handleAddPartSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedQueueForAction) return;
@@ -251,7 +239,6 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
       onUpdateQueueItems(selectedQueueForAction.id, updatedItems, newTotal);
     }
 
-    // Update local state if needed
     selectedQueueForAction.items = updatedItems;
     selectedQueueForAction.totalCost = newTotal;
 
@@ -259,7 +246,7 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
     showToast(`Suku cadang "${partObj.name}" berhasil ditambahkan.`);
   };
 
-  // 3. PROSES SERVICE: Add Labor/Service
+  // 3. PROSES SERVIS: Add Labor/Service
   const handleAddLaborSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedQueueForAction || !laborName.trim()) return;
@@ -287,15 +274,14 @@ export const ServiceDetailView: React.FC<ServiceDetailViewProps> = ({
     showToast(`Jasa servis "${newItem.name}" berhasil ditambahkan.`);
   };
 
-  // 3. PROSES SERVICE: Selesai -> Auto moves to Selesai Service
+  // 3. PROSES SERVIS: Selesai -> Auto moves to Selesai Servis
   const handleCompleteProcess = (queue: ServiceQueue) => {
     onUpdateQueueStatus(queue.id, 'selesai', 100);
-    showToast(`Pengerjaan ${queue.plateNumber} selesai! Pindah ke Selesai Service.`);
-    // Automated flow: Automatically move to Selesai Service sub-menu
-    setActiveTab('selesai-service');
+    showToast(`Pengerjaan ${queue.plateNumber} selesai! Pindah ke Selesai Servis.`);
+    setActiveTab('selesai-servis');
   };
 
-  // 4. SELESAI SERVICE: WhatsApp Output Action
+  // 4. SELESAI SERVIS: WhatsApp Output Action
   const handleSendWhatsAppInvoice = (queue: ServiceQueue) => {
     const phone = queue.customerPhone.replace(/[^0-9]/g, '');
     const cleanPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
@@ -325,7 +311,7 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
     showToast(`Membuka WhatsApp untuk mengirim nota ke ${queue.customerName}...`);
   };
 
-  // 4. SELESAI SERVICE: Print Output Action
+  // 4. SELESAI SERVIS: Print Output Action
   const handlePrintInvoice = (queue: ServiceQueue) => {
     setInvoiceQueue(queue);
     setTimeout(() => {
@@ -333,23 +319,17 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
     }, 300);
   };
 
-  // 5. TOTAL SERVICE: Manual Daily Reset
+  // 5. TOTAL SERVIS: Manual Daily Reset
   const handleManualDailyReset = () => {
     if (onResetDailyQueues) {
       onResetDailyQueues();
     }
     setShowDailyResetConfirm(false);
-    showToast('Log harian berhasil dibersihkan untuk hari baru!');
+    showToast('Log harian berhasil dibersihkan untuk shift hari baru!');
   };
 
   return (
     <div className="flex-1 bg-slate-50 flex flex-col min-h-screen">
-      {/* =========================================================================
-          1. HEADER & MAIN NAVIGATION
-          - Dynamic Header Title matching active sub-menu
-          - Search logo directly in header bar
-          - Clutter removal: No quick filter buttons (Semua, Menunggu, Proses, Selesai, Diambil)
-      ========================================================================= */}
       {/* 1. COMPACT HEADER BAR */}
       <div className="bg-[#008952] text-white px-4 py-2.5 shadow-sm sticky top-0 z-30">
         <div className="flex items-center justify-between gap-2">
@@ -362,7 +342,6 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
               <ArrowLeft className="w-4 h-4 text-white" />
             </button>
             <div className="min-w-0">
-              {/* Dynamic Header Title */}
               <h1 className="text-base font-extrabold tracking-tight truncate leading-tight">
                 {headerMeta.title}
               </h1>
@@ -372,32 +351,21 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
             </div>
           </div>
 
-          {/* Search Logo placed directly in header bar */}
+          {/* Header Action Tools */}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                 isSearchOpen ? 'bg-white text-[#008952]' : 'bg-white/15 text-white active:bg-white/30'
               }`}
-              title="Cari kendaraan atau plat nomor"
+              title="Cari nomor plat, antrian, atau pelanggan"
             >
               <Search className="w-4 h-4" />
             </button>
-
-            {/* Quick action button to Registrasi if on another tab */}
-            {activeTab !== 'registrasi' && (
-              <button
-                onClick={() => setActiveTab('registrasi')}
-                className="bg-white text-[#008952] font-bold text-[11px] px-2.5 py-1.5 rounded-xl flex items-center gap-1 shadow-xs active:scale-95 transition-all cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span className="hidden sm:inline">Daftar</span>
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Expandable Search Input directly in the header */}
+        {/* Expandable Search Input */}
         {isSearchOpen && (
           <div className="mt-2.5 relative animate-in fade-in slide-in-from-top-1 duration-150">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -406,7 +374,7 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Ketik nomor plat, nama, atau tipe motor..."
+              placeholder="Cari plat nomor, nama, atau mekanik..."
               className="w-full bg-white text-slate-900 text-xs rounded-xl pl-8.5 pr-8 py-2 shadow-inner focus:outline-none focus:ring-2 focus:ring-emerald-400 font-medium"
             />
             {searchQuery && (
@@ -419,9 +387,92 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
             )}
           </div>
         )}
+
+        {/* TOP SUB-MENU TAB STRIP (Selaras, Rapi, & Cepat Beralih) */}
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-2.5 -mx-1 px-1">
+          <button
+            onClick={() => setActiveTab('registrasi')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              activeTab === 'registrasi'
+                ? 'bg-white text-[#008952] shadow-xs'
+                : 'text-emerald-100 hover:bg-white/10'
+            }`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Registrasi</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('antrian')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              activeTab === 'antrian'
+                ? 'bg-white text-[#008952] shadow-xs'
+                : 'text-emerald-100 hover:bg-white/10'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>Antrian</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              activeTab === 'antrian' ? 'bg-emerald-100 text-[#008952]' : 'bg-white/20 text-white'
+            }`}>
+              {waitingQueues.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('proses-servis')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              activeTab === 'proses-servis'
+                ? 'bg-white text-[#008952] shadow-xs'
+                : 'text-emerald-100 hover:bg-white/10'
+            }`}
+          >
+            <Wrench className="w-3.5 h-3.5" />
+            <span>Proses Servis</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              activeTab === 'proses-servis' ? 'bg-emerald-100 text-[#008952]' : 'bg-white/20 text-white'
+            }`}>
+              {inProgressQueues.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('selesai-servis')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              activeTab === 'selesai-servis'
+                ? 'bg-white text-[#008952] shadow-xs'
+                : 'text-emerald-100 hover:bg-white/10'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>Selesai Servis</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              activeTab === 'selesai-servis' ? 'bg-emerald-100 text-[#008952]' : 'bg-white/20 text-white'
+            }`}>
+              {completedQueues.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('total-servis')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+              activeTab === 'total-servis'
+                ? 'bg-white text-[#008952] shadow-xs'
+                : 'text-emerald-100 hover:bg-white/10'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Total Servis</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              activeTab === 'total-servis' ? 'bg-emerald-100 text-[#008952]' : 'bg-white/20 text-white'
+            }`}>
+              {todayTotalQueues.length}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* Floating Toast Feedback for automated workflow routes */}
+      {/* Floating Toast Feedback */}
       {toastMessage && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 text-white text-xs px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-2 border border-slate-700 animate-in fade-in slide-in-from-top-3 duration-200 max-w-sm text-center">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -430,696 +481,714 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
       )}
 
       {/* =========================================================================
-          2. SUB-MENU VIEWS & WORKFLOWS
+          CONTENT VIEWS
       ========================================================================= */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col p-4 md:p-6 max-w-4xl mx-auto w-full">
+
         {/* =====================================================================
-            A. REGISTRASI
-            - Form Layout: Full Screen mode
-            - Input Styling: Minimalist design language (thin bottom lines only / underline style)
-            - Action Button: Save / Send (Simpan / Kirim)
-            - Automated Flow: Upon saving/sending, data automatically routes into Antrian!
+            1. REGISTRASI
+            - Form card dibuat rapi
+            - List ke bawah tanpa contoh cara isi
+            - Langsung mengalir ke antrian setelah simpan
         ===================================================================== */}
         {activeTab === 'registrasi' && (
-          <div className="flex-1 bg-white p-5 md:p-8 flex flex-col justify-between">
-            <div className="max-w-2xl mx-auto w-full">
-              {/* Header Info Banner */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
-                <div>
-                  <span className="text-[11px] font-bold tracking-wider text-emerald-700 uppercase bg-emerald-50 px-2.5 py-1 rounded-md">
-                    Registrasi Kendaraan Masuk
-                  </span>
-                  <h2 className="text-lg font-black text-slate-800 mt-1">Formulir Pendaftaran Servis</h2>
-                  <p className="text-xs text-slate-400">Isi data identitas unit. Setelah disimpan, sistem langsung mengarahkan ke Antrian.</p>
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-5 md:p-6 space-y-6">
+            {/* Header Form Card */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#008952] flex items-center justify-center shrink-0">
+                  <ClipboardList className="w-5 h-5" />
                 </div>
-                <div className="text-right shrink-0">
-                  <span className="text-[10px] text-slate-400 block font-medium">Nomor Tiket</span>
-                  <span className="text-base font-black text-[#008952]">{nextQueueNumber}</span>
+                <div>
+                  <h2 className="text-base font-extrabold text-slate-800">Formulir Pendaftaran Servis</h2>
+                  <p className="text-xs text-slate-400">Pendaftaran unit kendaraan masuk bengkel</p>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-[10px] text-slate-400 block font-medium">Nomor Antrian</span>
+                <span className="text-sm font-black text-[#008952] bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
+                  {nextQueueNumber}
+                </span>
+              </div>
+            </div>
+
+            {/* List Ke Bawah (Tanpa Contoh Cara Isi) */}
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              {/* 1. Nomor Plat Kendaraan */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nomor Plat Kendaraan <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={regPlate}
+                  onChange={(e) => setRegPlate(e.target.value.toUpperCase())}
+                  placeholder="Nomor plat kendaraan"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-900 font-extrabold text-sm tracking-wider transition-colors focus:outline-none"
+                />
+              </div>
+
+              {/* 2. Nama Pemilik / Pelanggan */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nama Pemilik / Pelanggan <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={regCustomerName}
+                  onChange={(e) => setRegCustomerName(e.target.value)}
+                  placeholder="Nama pemilik kendaraan"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-semibold text-xs transition-colors focus:outline-none"
+                />
+              </div>
+
+              {/* 3. Nomor WhatsApp / Telepon */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Nomor WhatsApp / Telepon
+                </label>
+                <input
+                  type="tel"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="Nomor WhatsApp aktif"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-semibold text-xs transition-colors focus:outline-none"
+                />
+              </div>
+
+              {/* 4. Model Kendaraan */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Model Kendaraan
+                </label>
+                <input
+                  type="text"
+                  value={regVehicleModel}
+                  onChange={(e) => setRegVehicleModel(e.target.value)}
+                  placeholder="Merk dan model kendaraan"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-semibold text-xs transition-colors focus:outline-none"
+                />
+              </div>
+
+              {/* 5. Tipe Kendaraan */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Tipe Kendaraan
+                </label>
+                <select
+                  value={regVehicleType}
+                  onChange={(e) => setRegVehicleType(e.target.value as ServiceQueue['vehicleType'])}
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-semibold text-xs transition-colors focus:outline-none cursor-pointer"
+                >
+                  <option value="Motor Matic">Motor Matic</option>
+                  <option value="Motor Bebek">Motor Bebek</option>
+                  <option value="Motor Sport">Motor Sport</option>
+                  <option value="Mobil">Mobil</option>
+                  <option value="Lainnya">Lainnya</option>
+                </select>
+              </div>
+
+              {/* 6. Kategori Pengerjaan */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Kategori Pengerjaan
+                </label>
+                <select
+                  value={regCategory}
+                  onChange={(e) => setRegCategory(e.target.value as ServiceQueue['serviceCategory'])}
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-semibold text-xs transition-colors focus:outline-none cursor-pointer"
+                >
+                  <option value="Servis Berkala">Servis Berkala</option>
+                  <option value="Servis Ringan">Servis Ringan</option>
+                  <option value="Ganti Oli & Filter">Ganti Oli & Filter</option>
+                  <option value="Turun Mesin">Turun Mesin</option>
+                  <option value="Kelistrikan">Kelistrikan</option>
+                  <option value="Custom">Custom / Perbaikan Lain</option>
+                </select>
+              </div>
+
+              {/* 7. Penugasan Mekanik */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Penugasan Mekanik
+                </label>
+                <select
+                  value={regMechanic}
+                  onChange={(e) => setRegMechanic(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-semibold text-xs transition-colors focus:outline-none cursor-pointer"
+                >
+                  {mechanics.map((m) => (
+                    <option key={m.id} value={m.name}>
+                      {m.name} ({m.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 8. Keluhan Kendaraan & Instruksi */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Keluhan Kendaraan & Instruksi
+                </label>
+                <textarea
+                  rows={2}
+                  value={regComplaint}
+                  onChange={(e) => setRegComplaint(e.target.value)}
+                  placeholder="Keluhan atau catatan pengerjaan"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#008952] focus:bg-white rounded-xl py-2.5 px-3.5 text-slate-800 font-medium text-xs transition-colors focus:outline-none resize-none"
+                />
+              </div>
+
+              {/* 9. Estimasi Waktu */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Estimasi Waktu Pengerjaan
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {['30 Menit', '45 Menit', '1 Jam', '1.5 Jam', '2 Jam', '3 Jam'].map((time) => (
+                    <button
+                      type="button"
+                      key={time}
+                      onClick={() => setRegEstimatedTime(time)}
+                      className={`text-xs px-3 py-1.5 rounded-lg transition-all font-semibold cursor-pointer ${
+                        regEstimatedTime === time
+                          ? 'bg-[#008952] text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {/* Minimalist Full Screen Underline Form */}
-              <form onSubmit={handleRegisterSubmit} className="space-y-6">
-                {/* 1. Plat Nomor Kendaraan */}
-                <div className="group">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Nomor Plat Kendaraan *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={regPlate}
-                    onChange={(e) => setRegPlate(e.target.value.toUpperCase())}
-                    placeholder="Contoh: D 4521 ABC"
-                    className="w-full bg-transparent border-0 border-b-2 border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-900 font-extrabold text-base tracking-wider transition-colors placeholder:text-slate-300 placeholder:font-normal focus:outline-none"
-                  />
-                </div>
-
-                {/* 2. Nama Pemilik & No WhatsApp */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="group">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Nama Pemilik / Pelanggan *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={regCustomerName}
-                      onChange={(e) => setRegCustomerName(e.target.value)}
-                      placeholder="Nama lengkap pelanggan"
-                      className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-semibold text-sm transition-colors placeholder:text-slate-300 placeholder:font-normal focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      No. WhatsApp / Telepon
-                    </label>
-                    <input
-                      type="tel"
-                      value={regPhone}
-                      onChange={(e) => setRegPhone(e.target.value)}
-                      placeholder="0812xxxxxxxx"
-                      className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-semibold text-sm transition-colors placeholder:text-slate-300 placeholder:font-normal focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* 3. Model Kendaraan & Tipe */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="group">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Model Kendaraan
-                    </label>
-                    <input
-                      type="text"
-                      value={regVehicleModel}
-                      onChange={(e) => setRegVehicleModel(e.target.value)}
-                      placeholder="Contoh: Honda Vario 160 (2023)"
-                      className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-semibold text-sm transition-colors placeholder:text-slate-300 placeholder:font-normal focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Tipe Kendaraan
-                    </label>
-                    <select
-                      value={regVehicleType}
-                      onChange={(e) => setRegVehicleType(e.target.value as ServiceQueue['vehicleType'])}
-                      className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-semibold text-sm transition-colors focus:outline-none cursor-pointer"
-                    >
-                      <option value="Motor Matic">Motor Matic</option>
-                      <option value="Motor Bebek">Motor Bebek</option>
-                      <option value="Motor Sport">Motor Sport</option>
-                      <option value="Mobil">Mobil</option>
-                      <option value="Lainnya">Lainnya</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* 4. Kategori Servis & Mekanik */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="group">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Kategori Pengerjaan
-                    </label>
-                    <select
-                      value={regCategory}
-                      onChange={(e) => setRegCategory(e.target.value as ServiceQueue['serviceCategory'])}
-                      className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-semibold text-sm transition-colors focus:outline-none cursor-pointer"
-                    >
-                      <option value="Servis Berkala">Servis Berkala</option>
-                      <option value="Servis Ringan">Servis Ringan</option>
-                      <option value="Ganti Oli & Filter">Ganti Oli & Filter</option>
-                      <option value="Turun Mesin">Turun Mesin</option>
-                      <option value="Kelistrikan">Kelistrikan</option>
-                      <option value="Custom">Custom / Perbaikan Lain</option>
-                    </select>
-                  </div>
-
-                  <div className="group">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                      Penugasan Mekanik
-                    </label>
-                    <select
-                      value={regMechanic}
-                      onChange={(e) => setRegMechanic(e.target.value)}
-                      className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-semibold text-sm transition-colors focus:outline-none cursor-pointer"
-                    >
-                      {mechanics.map((m) => (
-                        <option key={m.id} value={m.name}>
-                          {m.name} ({m.role})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* 5. Keluhan & Instruksi Khusus */}
-                <div className="group">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Keluhan Kendaraan & Instruksi Khusus
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={regComplaint}
-                    onChange={(e) => setRegComplaint(e.target.value)}
-                    placeholder="Contoh: Tarikan berat di tanjakan, rem belakang berdecit, ganti oli mesin..."
-                    className="w-full bg-transparent border-0 border-b border-slate-300 focus:border-[#008952] focus:ring-0 rounded-none py-2 px-0 text-slate-800 font-medium text-sm transition-colors placeholder:text-slate-300 focus:outline-none resize-none"
-                  />
-                </div>
-
-                {/* 6. Estimasi Waktu */}
-                <div className="group">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                    Estimasi Waktu Pengerjaan
-                  </label>
-                  <div className="flex items-center gap-2 pt-1 flex-wrap">
-                    {['30 Menit', '45 Menit', '1 Jam', '1.5 Jam', '2 Jam', '3 Jam'].map((time) => (
-                      <button
-                        type="button"
-                        key={time}
-                        onClick={() => setRegEstimatedTime(time)}
-                        className={`text-xs px-3 py-1.5 rounded-full transition-all font-semibold ${
-                          regEstimatedTime === time
-                            ? 'bg-[#008952] text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Action Button: Simpan / Kirim (Save / Send) */}
-                <div className="pt-6">
-                  <button
-                    type="submit"
-                    className="w-full bg-[#008952] hover:bg-[#007545] active:scale-[0.99] text-white font-black py-4 px-6 rounded-2xl shadow-lg shadow-emerald-700/25 flex items-center justify-center gap-2.5 transition-all text-sm tracking-wide"
-                  >
-                    <Send className="w-4 h-4 stroke-[2.5]" />
-                    <span>Simpan / Kirim (Masuk ke Antrian)</span>
-                  </button>
-                  <p className="text-[11px] text-center text-slate-400 mt-2">
-                    Data akan otomatis terhubung ke papan antrian bengkel.
-                  </p>
-                </div>
-              </form>
-            </div>
+              {/* Action Button: Simpan / Masuk Antrian */}
+              <div className="pt-3">
+                <button
+                  type="submit"
+                  className="w-full h-11 bg-[#008952] hover:bg-[#007545] active:scale-[0.99] text-white font-bold rounded-xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all text-xs tracking-wide cursor-pointer"
+                >
+                  <Send className="w-4 h-4 stroke-[2.2]" />
+                  <span>Simpan & Masukkan ke Antrian</span>
+                </button>
+                <p className="text-[11px] text-center text-slate-400 mt-2">
+                  Unit yang didaftarkan akan otomatis muncul pada daftar Antrian bengkel.
+                </p>
+              </div>
+            </form>
           </div>
         )}
 
         {/* =====================================================================
-            B. ANTRIAN (Daftar Menunggu Servis)
-            - View: Displays list of queue logs (status: 'menunggu')
-            - Action Button: Proses / Kerjakan
-            - Automated Flow: Clicking process moves item to Proses Service sub-menu!
+            2. ANTRIAN
+            - List minimalis underline (tanpa card dalam card)
+            - Nomor antrian sejajar dengan plat nomor
+            - Tombol selaras
         ===================================================================== */}
         {activeTab === 'antrian' && (
-          <div className="flex-1 p-4 md:p-6 space-y-3.5 max-w-4xl mx-auto w-full overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-800">Daftar Antrian Menunggu Servis</h2>
+                <p className="text-[11px] text-slate-400">Unit kendaraan siap masuk pengerjaan mekanik</p>
+              </div>
+              <span className="text-xs font-black text-[#008952] bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                {filterBySearch(waitingQueues).length} Unit
+              </span>
+            </div>
+
             {filterBySearch(waitingQueues).length === 0 ? (
-              <div className="bg-white rounded-3xl p-10 text-center border border-slate-100 shadow-xs mt-6">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#008952] flex items-center justify-center mx-auto mb-3 shadow-inner">
-                  <Clock className="w-7 h-7" />
+              <div className="p-10 text-center">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#008952] flex items-center justify-center mx-auto mb-2">
+                  <Clock className="w-6 h-6" />
                 </div>
-                <h3 className="font-extrabold text-slate-800 text-base">Tidak Ada Kendaraan di Antrian</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+                <h3 className="font-extrabold text-slate-800 text-sm">Tidak Ada Kendaraan di Antrian</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
                   Semua kendaraan sedang dikerjakan atau belum ada pendaftaran baru.
                 </p>
                 <button
                   onClick={() => setActiveTab('registrasi')}
-                  className="mt-5 bg-[#008952] hover:bg-[#007545] text-white text-xs font-bold px-5 py-2.5 rounded-xl inline-flex items-center gap-2 shadow-sm active:scale-95 transition-all"
+                  className="mt-4 bg-[#008952] hover:bg-[#007545] text-white text-xs font-bold px-4 py-2 rounded-xl inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Daftarkan Unit Baru</span>
                 </button>
               </div>
             ) : (
-              filterBySearch(waitingQueues).map((queue) => (
-                <div
-                  key={queue.id}
-                  className="bg-white rounded-2xl p-4 md:p-5 shadow-xs border border-slate-100 hover:border-emerald-200 transition-all space-y-3.5"
-                >
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-[#008952] text-white flex flex-col items-center justify-center shadow-xs shrink-0">
-                        <span className="text-[9px] uppercase tracking-wider text-emerald-200 font-bold">No</span>
-                        <span className="text-base font-black leading-none mt-0.5">{queue.queueNumber}</span>
+              <div className="divide-y divide-slate-100">
+                {filterBySearch(waitingQueues).map((queue) => (
+                  <div
+                    key={queue.id}
+                    className="p-4 md:p-5 hover:bg-slate-50/70 transition-colors space-y-2.5"
+                  >
+                    {/* Baris 1: Nomor Antrian SEJAJAR dengan Plat Nomor */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        {/* Nomor antrian sejajar plat nomor */}
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-black text-xs tracking-wider shrink-0 shadow-2xs">
+                          {queue.queueNumber}
+                        </span>
+                        <span className="text-base font-black text-slate-900 tracking-wide shrink-0">
+                          {queue.plateNumber}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md shrink-0">
+                          {queue.vehicleType}
+                        </span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          • {queue.vehicleModel}
+                        </span>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-black text-slate-900 text-base">{queue.plateNumber}</h3>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold">
-                            {queue.vehicleType}
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-slate-700 mt-0.5">{queue.vehicleModel}</p>
-                        <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                          <span>{queue.customerName}</span>
-                          <span>•</span>
-                          <span className="text-emerald-700 font-medium">{queue.customerPhone}</span>
-                        </p>
-                      </div>
+
+                      <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        <span>Menunggu</span>
+                      </span>
                     </div>
 
-                    <span className="shrink-0 text-[11px] font-extrabold px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      <span>Menunggu</span>
-                    </span>
-                  </div>
-
-                  {/* Keluhan & Keterangan */}
-                  <div className="bg-slate-50/80 rounded-xl p-3 text-xs text-slate-700 space-y-1.5 border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="font-semibold text-slate-500">Kategori: {queue.serviceCategory}</span>
-                      <span>Jam Masuk: {queue.timeIn}</span>
-                    </div>
-                    <p className="text-slate-800 font-medium leading-relaxed">
-                      <span className="font-bold text-slate-900">Keluhan:</span> {queue.complaint}
-                    </p>
-                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-200/60 text-slate-500">
+                    {/* Baris 2: Data Pelanggan, Mekanik, & Waktu Sejajar */}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                      <span>Pelanggan: <strong className="text-slate-800">{queue.customerName}</strong> ({queue.customerPhone})</span>
+                      <span className="text-slate-300">•</span>
                       <span>Mekanik: <strong className="text-slate-800">{queue.mechanicName}</strong></span>
-                      <span>Estimasi: <strong className="text-emerald-700">{queue.estimatedCompletion}</strong></span>
+                      <span className="text-slate-300">•</span>
+                      <span>Kategori: <strong className="text-slate-700">{queue.serviceCategory}</strong></span>
+                      <span className="text-slate-300">•</span>
+                      <span>Jam Masuk: <strong className="text-slate-700">{queue.timeIn}</strong></span>
+                    </div>
+
+                    {/* Baris 3: Keluhan */}
+                    {queue.complaint && (
+                      <p className="text-xs text-slate-700 leading-relaxed">
+                        <span className="font-semibold text-slate-800">Keluhan:</span> {queue.complaint}
+                      </p>
+                    )}
+
+                    {/* Baris 4: Tombol Selaras */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 gap-2">
+                      <span className="text-[11px] text-slate-400">
+                        Estimasi Pengerjaan: <strong className="text-emerald-700">{queue.estimatedCompletion}</strong>
+                      </span>
+
+                      <button
+                        onClick={() => handleStartProcess(queue)}
+                        className="h-8 bg-[#008952] hover:bg-[#007545] active:scale-95 text-white font-bold text-xs px-4 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <Wrench className="w-3.5 h-3.5" />
+                        <span>Proses / Kerjakan</span>
+                        <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Action Button: Proses / Kerjakan (Automated Flow to Proses Service) */}
-                  <div className="pt-1 flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => handleStartProcess(queue)}
-                      className="w-full sm:w-auto bg-[#008952] hover:bg-[#007545] active:scale-95 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all"
-                    >
-                      <Wrench className="w-4 h-4 stroke-[2.3]" />
-                      <span>Proses / Kerjakan</span>
-                      <ChevronRight className="w-4 h-4 opacity-70" />
-                    </button>
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
         {/* =====================================================================
-            C. PROSES SERVICE (Pengerjaan & Tambah Part/Jasa)
-            - View: Active service logs currently in progress (status: 'proses')
-            - Features & Actions:
-              - Add Part (Suku Cadang) button
-              - Add Service/Labor button
-              - Selesai (Complete) button
-            - Automated Flow: Clicking Selesai automatically moves to Selesai Service!
+            3. PROSES SERVIS (sebelumnya service)
+            - List minimalis underline (tanpa card dalam card)
+            - Tombol sejajarkan/selaraskan
+            - Plat nomor dll sejajarkan/selaraskan
         ===================================================================== */}
-        {activeTab === 'proses-service' && (
-          <div className="flex-1 p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full overflow-y-auto">
+        {activeTab === 'proses-servis' && (
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-800">Daftar Proses Servis Aktif</h2>
+                <p className="text-[11px] text-slate-400">Pengerjaan teknisi dan penambahan suku cadang/jasa</p>
+              </div>
+              <span className="text-xs font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                {filterBySearch(inProgressQueues).length} Unit Dikerjakan
+              </span>
+            </div>
+
             {filterBySearch(inProgressQueues).length === 0 ? (
-              <div className="bg-white rounded-3xl p-10 text-center border border-slate-100 shadow-xs mt-6">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
-                  <Wrench className="w-7 h-7" />
+              <div className="p-10 text-center">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2">
+                  <Wrench className="w-6 h-6" />
                 </div>
-                <h3 className="font-extrabold text-slate-800 text-base">Tidak Ada Servis yang Sedang Dikerjakan</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Pilih kendaraan di sub-menu <strong>Antrian</strong> dan klik tombol <em>Proses / Kerjakan</em>.
+                <h3 className="font-extrabold text-slate-800 text-sm">Tidak Ada Servis yang Sedang Dikerjakan</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Pilih unit pada sub-menu <strong>Antrian</strong> dan klik tombol <em>Proses / Kerjakan</em>.
                 </p>
                 <button
                   onClick={() => setActiveTab('antrian')}
-                  className="mt-5 bg-[#008952] hover:bg-[#007545] text-white text-xs font-bold px-5 py-2.5 rounded-xl inline-flex items-center gap-2 shadow-sm active:scale-95 transition-all"
+                  className="mt-4 bg-[#008952] hover:bg-[#007545] text-white text-xs font-bold px-4 py-2 rounded-xl inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
-                  <Clock className="w-4 h-4" />
-                  <span>Lihat Daftar Antrian ({waitingQueues.length})</span>
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Lihat Antrian ({waitingQueues.length})</span>
                 </button>
               </div>
             ) : (
-              filterBySearch(inProgressQueues).map((queue) => (
-                <div
-                  key={queue.id}
-                  className="bg-white rounded-2xl p-4 md:p-5 shadow-xs border-2 border-emerald-500/20 hover:border-emerald-500/40 transition-all space-y-3.5"
-                >
-                  {/* Card Header & Progress Bar */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex flex-col items-center justify-center shadow-xs shrink-0">
-                        <span className="text-[9px] uppercase tracking-wider text-blue-200 font-bold">No</span>
-                        <span className="text-base font-black leading-none mt-0.5">{queue.queueNumber}</span>
+              <div className="divide-y divide-slate-100">
+                {filterBySearch(inProgressQueues).map((queue) => (
+                  <div
+                    key={queue.id}
+                    className="p-4 md:p-5 hover:bg-slate-50/70 transition-colors space-y-3"
+                  >
+                    {/* Baris 1: Plat Nomor, Nomor Antrian, & Total Berjalan SEJAJAR */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-600 text-white font-black text-xs tracking-wider shrink-0 shadow-2xs">
+                          {queue.queueNumber}
+                        </span>
+                        <span className="text-base font-black text-slate-900 tracking-wide shrink-0">
+                          {queue.plateNumber}
+                        </span>
+                        <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md shrink-0">
+                          Dikerjakan
+                        </span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          • {queue.vehicleModel}
+                        </span>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-black text-slate-900 text-base">{queue.plateNumber}</h3>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-extrabold">
-                            Dikerjakan
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-slate-700 mt-0.5">{queue.vehicleModel}</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          Mekanik: <strong className="text-slate-800">{queue.mechanicName}</strong> • {queue.customerName}
-                        </p>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-slate-400 block font-medium">Total Berjalan</span>
+                        <span className="text-sm font-black text-[#008952]">
+                          Rp {queue.totalCost.toLocaleString('id-ID')}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] font-bold text-slate-400 block">Total Berjalan</span>
-                      <span className="text-sm font-black text-[#008952]">
-                        Rp {queue.totalCost.toLocaleString('id-ID')}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress Indicator */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600">
-                      <span className="flex items-center gap-1.5 text-blue-700">
-                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping inline-block" />
-                        Sedang Dikerjakan Mekanik
-                      </span>
-                      <span>{queue.progressPercent}% Selesai</span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(15, queue.progressPercent)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Attached Items (Jasa & Spareparts) */}
-                  <div className="bg-slate-50 rounded-xl p-3 space-y-2 border border-slate-100">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 pb-1 border-b border-slate-200">
-                      <span>Rincian Jasa & Sparepart Terpasang</span>
-                      <span className="text-slate-400">{queue.items.length} Item</span>
+                    {/* Baris 2: Mekanik, Pelanggan, & Kategori Sejajar */}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                      <span>Mekanik: <strong className="text-slate-800">{queue.mechanicName}</strong></span>
+                      <span className="text-slate-300">•</span>
+                      <span>Pelanggan: <strong className="text-slate-800">{queue.customerName}</strong> ({queue.customerPhone})</span>
+                      <span className="text-slate-300">•</span>
+                      <span>Kategori: <strong className="text-slate-700">{queue.serviceCategory}</strong></span>
                     </div>
 
-                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                      {queue.items.map((it, idx) => (
-                        <div key={it.id || idx} className="flex items-center justify-between text-xs py-0.5">
-                          <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase shrink-0 ${
-                              it.type === 'part' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                            }`}>
-                              {it.type}
-                            </span>
-                            <span className="truncate text-slate-800 font-medium">{it.name}</span>
-                            <span className="text-slate-400 font-semibold text-[11px]">x{it.qty}</span>
-                          </div>
-                          <span className="font-bold text-slate-900 shrink-0 text-xs">
-                            Rp {(it.price * it.qty).toLocaleString('id-ID')}
+                    {/* Baris 3: Progress Bar Ramping */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                        <span>Pengerjaan Mekanik</span>
+                        <span className="text-blue-700 font-bold">{queue.progressPercent}% Selesai</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                        <div
+                          className="h-full bg-[#008952] rounded-full transition-all duration-500"
+                          style={{ width: `${Math.max(15, queue.progressPercent)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Baris 4: Rincian Item (Tanpa Card Dalam Card - Minimal List) */}
+                    <div className="pt-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] text-slate-400 font-bold mr-1">Rincian ({queue.items.length}):</span>
+                        {queue.items.map((it, idx) => (
+                          <span
+                            key={it.id || idx}
+                            className="inline-flex items-center gap-1.5 text-[11px] bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md font-medium"
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${it.type === 'part' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                            <span>{it.name}</span>
+                            <span className="text-slate-400">({it.qty}x)</span>
+                            <span className="text-slate-800 font-bold">Rp {(it.price * it.qty).toLocaleString('id-ID')}</span>
                           </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* FEATURES & ACTION BUTTONS:
-                      - Add Part (Suku Cadang)
-                      - Add Service/Labor
-                      - Selesai (Complete)
-                  */}
-                  <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      {/* Button: + Tambah Part */}
-                      <button
-                        onClick={() => {
-                          setSelectedQueueForAction(queue);
-                          setIsAddPartModalOpen(true);
-                        }}
-                        className="bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs px-3 py-2 rounded-xl border border-amber-200 flex items-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <Package className="w-3.5 h-3.5 text-amber-700" />
-                        <span>+ Tambah Part</span>
-                      </button>
-
-                      {/* Button: + Tambah Jasa */}
-                      <button
-                        onClick={() => {
-                          setSelectedQueueForAction(queue);
-                          setIsAddLaborModalOpen(true);
-                        }}
-                        className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-2 rounded-xl border border-emerald-200 flex items-center gap-1.5 active:scale-95 transition-all"
-                      >
-                        <Wrench className="w-3.5 h-3.5 text-emerald-700" />
-                        <span>+ Tambah Jasa</span>
-                      </button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Button: Selesai (Automated Flow to Selesai Service) */}
-                    <button
-                      onClick={() => handleCompleteProcess(queue)}
-                      className="bg-[#008952] hover:bg-[#007545] active:scale-95 text-white font-black text-xs px-5 py-2 rounded-xl shadow-md shadow-emerald-700/20 flex items-center gap-2 transition-all ml-auto"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Selesai (Pindah ke Selesai)</span>
-                      <ChevronRight className="w-4 h-4 opacity-70" />
-                    </button>
+                    {/* Baris 5: TOMBOL SEJAJARKAN / SELARASKAN */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        {/* Tombol + Tambah Part */}
+                        <button
+                          onClick={() => {
+                            setSelectedQueueForAction(queue);
+                            setIsAddPartModalOpen(true);
+                          }}
+                          className="h-8 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs px-3 rounded-xl border border-amber-200 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Package className="w-3.5 h-3.5 text-amber-700" />
+                          <span>+ Tambah Part</span>
+                        </button>
+
+                        {/* Tombol + Tambah Jasa */}
+                        <button
+                          onClick={() => {
+                            setSelectedQueueForAction(queue);
+                            setIsAddLaborModalOpen(true);
+                          }}
+                          className="h-8 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs px-3 rounded-xl border border-emerald-200 flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Wrench className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>+ Tambah Jasa</span>
+                        </button>
+                      </div>
+
+                      {/* Tombol Selesai Servis */}
+                      <button
+                        onClick={() => handleCompleteProcess(queue)}
+                        className="h-8 bg-[#008952] hover:bg-[#007545] active:scale-95 text-white font-bold text-xs px-4 rounded-xl shadow-xs flex items-center gap-1.5 transition-all ml-auto cursor-pointer"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Selesai Servis</span>
+                        <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
         {/* =====================================================================
-            D. SELESAI SERVICE (Unit Selesai & Output Nota / WA)
-            - View: Displays completed service logs (status: 'selesai')
-            - Features & Actions: Access to Invoice / Bill view
-            - Output Options: Print or Send via WhatsApp
+            4. SELESAI SERVIS (sebelumnya service)
+            - List minimalis underline (tanpa card dalam card)
+            - Tombol (lihat nota, cetak, kirim wa) sejajarkan/selaraskan
+            - Plat nomor dll sejajarkan/selaraskan
         ===================================================================== */}
-        {activeTab === 'selesai-service' && (
-          <div className="flex-1 p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full overflow-y-auto">
+        {activeTab === 'selesai-servis' && (
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-800">Daftar Selesai Servis</h2>
+                <p className="text-[11px] text-slate-400">Unit rampung dikerjakan, cetak nota atau kirim rincian via WA</p>
+              </div>
+              <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100">
+                {filterBySearch(completedQueues).length} Unit Selesai
+              </span>
+            </div>
+
             {filterBySearch(completedQueues).length === 0 ? (
-              <div className="bg-white rounded-3xl p-10 text-center border border-slate-100 shadow-xs mt-6">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#008952] flex items-center justify-center mx-auto mb-3 shadow-inner">
-                  <CheckCircle2 className="w-7 h-7" />
+              <div className="p-10 text-center">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#008952] flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle2 className="w-6 h-6" />
                 </div>
-                <h3 className="font-extrabold text-slate-800 text-base">Belum Ada Servis yang Selesai</h3>
-                <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                  Kendaraan yang telah selesai dikerjakan mekanik di sub-menu <strong>Proses Service</strong> akan muncul di sini.
+                <h3 className="font-extrabold text-slate-800 text-sm">Belum Ada Servis yang Selesai</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Unit yang telah selesai dikerjakan mekanik di sub-menu <strong>Proses Servis</strong> akan tampil di sini.
                 </p>
                 <button
-                  onClick={() => setActiveTab('proses-service')}
-                  className="mt-5 bg-[#008952] hover:bg-[#007545] text-white text-xs font-bold px-5 py-2.5 rounded-xl inline-flex items-center gap-2 shadow-sm active:scale-95 transition-all"
+                  onClick={() => setActiveTab('proses-servis')}
+                  className="mt-4 bg-[#008952] hover:bg-[#007545] text-white text-xs font-bold px-4 py-2 rounded-xl inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
-                  <Wrench className="w-4 h-4" />
-                  <span>Lihat Proses Service ({inProgressQueues.length})</span>
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>Lihat Proses Servis ({inProgressQueues.length})</span>
                 </button>
               </div>
             ) : (
-              filterBySearch(completedQueues).map((queue) => (
-                <div
-                  key={queue.id}
-                  className="bg-white rounded-2xl p-4 md:p-5 shadow-xs border border-emerald-200/80 hover:shadow-md transition-all space-y-3.5"
-                >
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-emerald-700 text-white flex flex-col items-center justify-center shadow-xs shrink-0">
-                        <span className="text-[9px] uppercase tracking-wider text-emerald-200 font-bold">No</span>
-                        <span className="text-base font-black leading-none mt-0.5">{queue.queueNumber}</span>
+              <div className="divide-y divide-slate-100">
+                {filterBySearch(completedQueues).map((queue) => (
+                  <div
+                    key={queue.id}
+                    className="p-4 md:p-5 hover:bg-slate-50/70 transition-colors space-y-3"
+                  >
+                    {/* Baris 1: Plat Nomor, Nomor Antrian, & Total Tagihan SEJAJAR */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-800 text-white font-black text-xs tracking-wider shrink-0 shadow-2xs">
+                          {queue.queueNumber}
+                        </span>
+                        <span className="text-base font-black text-slate-900 tracking-wide shrink-0">
+                          {queue.plateNumber}
+                        </span>
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Siap Diambil</span>
+                        </span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          • {queue.vehicleModel}
+                        </span>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-black text-slate-900 text-base">{queue.plateNumber}</h3>
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>Siap Diambil</span>
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-slate-700 mt-0.5">{queue.vehicleModel}</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          Pelanggan: <strong className="text-slate-800">{queue.customerName}</strong> ({queue.customerPhone})
-                        </p>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] text-slate-400 block font-medium">Total Tagihan</span>
+                        <span className="text-base font-black text-[#008952]">
+                          Rp {queue.totalCost.toLocaleString('id-ID')}
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] font-bold text-slate-400 block">Total Tagihan</span>
-                      <span className="text-base font-black text-[#008952]">
-                        Rp {queue.totalCost.toLocaleString('id-ID')}
-                      </span>
+                    {/* Baris 2: Mekanik, Pelanggan, & Item Terpasang Sejajar */}
+                    <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                      <span>Pelanggan: <strong className="text-slate-800">{queue.customerName}</strong> ({queue.customerPhone})</span>
+                      <span className="text-slate-300">•</span>
+                      <span>Mekanik: <strong className="text-slate-800">{queue.mechanicName}</strong></span>
+                      <span className="text-slate-300">•</span>
+                      <span>Total: <strong className="text-slate-700">{queue.items.length} Item Part/Jasa</strong></span>
                     </div>
-                  </div>
 
-                  {/* Summary of services & parts */}
-                  <div className="bg-emerald-50/50 rounded-xl p-3 text-xs text-slate-700 space-y-1.5 border border-emerald-100/60">
-                    <div className="flex items-center justify-between text-[11px] text-emerald-900 font-bold">
-                      <span>Mekanik: {queue.mechanicName}</span>
-                      <span>{queue.items.length} Rincian Item Terpasang</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
+                    {/* Baris 3: Item Terpasang (Minimalis Underline - Tanpa Card Dalam Card) */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       {queue.items.map((it, idx) => (
                         <span
                           key={idx}
-                          className="bg-white border border-emerald-200/80 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-700"
+                          className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md text-[11px] font-medium"
                         >
                           {it.name} (Rp {it.price.toLocaleString('id-ID')})
                         </span>
                       ))}
                     </div>
-                  </div>
 
-                  {/* Features & Actions:
-                      1. Lihat Nota / Invoice
-                      2. Cetak Nota (Print)
-                      3. Kirim via WhatsApp
-                  */}
-                  <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
-                    {/* View Invoice / Bill */}
-                    <button
-                      onClick={() => setInvoiceQueue(queue)}
-                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 active:scale-95 transition-all"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-slate-600" />
-                      <span>Lihat Nota / Invoice</span>
-                    </button>
-
-                    <div className="flex items-center gap-2 ml-auto">
-                      {/* Output: Cetak Nota */}
+                    {/* Baris 4: TOMBOL (LIHAT NOTA, CETAK, KIRIM WA) SEJAJARKAN / SELARASKAN */}
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 flex-wrap">
+                      {/* Tombol Lihat Nota */}
                       <button
-                        onClick={() => handlePrintInvoice(queue)}
-                        className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                        onClick={() => setInvoiceQueue(queue)}
+                        className="h-8 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 rounded-xl flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                       >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>Cetak</span>
+                        <FileText className="w-3.5 h-3.5 text-slate-600" />
+                        <span>Lihat Nota</span>
                       </button>
 
-                      {/* Output: Kirim via WhatsApp */}
-                      <button
-                        onClick={() => handleSendWhatsAppInvoice(queue)}
-                        className="bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white font-black text-xs px-4 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Kirim WhatsApp</span>
-                      </button>
+                      <div className="flex items-center gap-2 ml-auto">
+                        {/* Tombol Cetak Nota */}
+                        <button
+                          onClick={() => handlePrintInvoice(queue)}
+                          className="h-8 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-3.5 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Cetak Nota</span>
+                        </button>
+
+                        {/* Tombol Kirim WA */}
+                        <button
+                          onClick={() => handleSendWhatsAppInvoice(queue)}
+                          className="h-8 bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white font-bold text-xs px-4 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Kirim WA</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
 
         {/* =====================================================================
-            E. TOTAL SERVICE (Comprehensive Log of All Services Combined)
-            - View: Displays comprehensive log of all services combined
-            - Special Rule (Daily Reset): All data/logs within this menu must automatically
-              clear/reset at the start of the next day.
+            5. TOTAL SERVIS (sebelumnya service)
+            - Keterangan 4 card kecil selaraskan
+            - Aturan reset rapikan/buat lebih kecil/simple
+            - Rekapitulasi list minimalis underline
         ===================================================================== */}
-        {activeTab === 'total-service' && (
-          <div className="flex-1 p-4 md:p-6 space-y-4 max-w-4xl mx-auto w-full overflow-y-auto">
-            {/* KPI Stats Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                <span className="text-[10px] font-bold text-slate-400 block uppercase">Total Unit Hari Ini</span>
-                <span className="text-2xl font-black text-slate-900 mt-0.5 block">{todayTotalQueues.length}</span>
-                <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">Semua Status</span>
+        {activeTab === 'total-servis' && (
+          <div className="space-y-4">
+            {/* 1. KETERANGAN 4 CARD KECIL SELARASKAN */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Total Unit</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">{todayTotalQueues.length}</span>
+                <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Hari Ini</span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                <span className="text-[10px] font-bold text-amber-500 block uppercase">Menunggu</span>
-                <span className="text-2xl font-black text-amber-600 mt-0.5 block">{waitingQueues.length}</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-0.5 block">Di Antrian</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-amber-500 block uppercase tracking-wider">Menunggu</span>
+                <span className="text-2xl font-black text-amber-600 mt-1 block">{waitingQueues.length}</span>
+                <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Di Antrian</span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                <span className="text-[10px] font-bold text-blue-500 block uppercase">Dikerjakan</span>
-                <span className="text-2xl font-black text-blue-600 mt-0.5 block">{inProgressQueues.length}</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-0.5 block">Di Pit Servis</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-blue-500 block uppercase tracking-wider">Dikerjakan</span>
+                <span className="text-2xl font-black text-blue-600 mt-1 block">{inProgressQueues.length}</span>
+                <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Di Pit Servis</span>
               </div>
 
-              <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                <span className="text-[10px] font-bold text-emerald-600 block uppercase">Selesai</span>
-                <span className="text-2xl font-black text-[#008952] mt-0.5 block">{completedQueues.length}</span>
-                <span className="text-[10px] text-slate-400 font-medium mt-0.5 block">Siap / Diambil</span>
+              <div className="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-emerald-600 block uppercase tracking-wider">Selesai</span>
+                <span className="text-2xl font-black text-[#008952] mt-1 block">{completedQueues.length}</span>
+                <span className="text-[10px] text-slate-500 font-semibold mt-1 block">Siap / Diambil</span>
               </div>
             </div>
 
-            {/* Daily Reset Notification Banner & Manual Reset Trigger */}
-            <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-extrabold text-slate-900 text-xs">Aturan Reset Harian (Daily Reset)</h4>
-                    <span className="text-[10px] bg-emerald-200/70 text-emerald-900 font-black px-2 py-0.2 rounded-full">
-                      Otomatis 00:00
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                    Log pada menu ini otomatis dibersihkan setiap pergantian hari baru untuk rekap shift operasional.
-                  </p>
-                </div>
+            {/* 2. ATURAN RESET RAPIKAN / BUAT LEBIH KECIL / SIMPLE */}
+            <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Clock className="w-4 h-4 text-emerald-700 shrink-0" />
+                <p className="text-xs text-slate-700 font-medium truncate">
+                  <strong className="text-slate-900">Reset Harian:</strong> Otomatis di-reset pukul 00:00 untuk shift baru.
+                </p>
               </div>
 
               <button
                 onClick={() => setShowDailyResetConfirm(true)}
-                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[11px] px-3 py-2 rounded-xl shrink-0 flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all"
+                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[11px] px-2.5 py-1.5 rounded-lg shrink-0 flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer"
                 title="Bersihkan log harian sekarang"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                <span>Reset Harian</span>
+                <RotateCcw className="w-3 h-3 text-slate-500" />
+                <span>Reset Hari Ini</span>
               </button>
             </div>
 
-            {/* Comprehensive Combined Log Table / List */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            {/* 3. REKAPITULASI LIST MINIMALIS UNDERLINE */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
                 <div>
-                  <h3 className="font-extrabold text-slate-800 text-sm">Rekapitulasi Semua Servis ({todayTotalQueues.length})</h3>
-                  <p className="text-[11px] text-slate-400">Daftar lengkap pengerjaan unit hari ini</p>
+                  <h3 className="font-extrabold text-slate-800 text-sm">
+                    Rekapitulasi Semua Servis ({todayTotalQueues.length})
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Log pengerjaan unit lengkap hari ini</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 font-medium">Estimasi Omset Servis</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Estimasi Omset</span>
                   <p className="text-sm font-black text-[#008952]">
                     Rp {todayTotalQueues.reduce((acc, q) => acc + q.totalCost, 0).toLocaleString('id-ID')}
                   </p>
                 </div>
               </div>
 
-              <div className="divide-y divide-slate-100">
-                {filterBySearch(todayTotalQueues).map((queue) => (
-                  <div key={queue.id} className="p-4 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex flex-col items-center justify-center font-black text-xs shrink-0">
-                        {queue.queueNumber}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-slate-900 text-sm">{queue.plateNumber}</span>
-                          <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full capitalize ${
-                            queue.status === 'selesai'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : queue.status === 'proses'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {queue.status}
-                          </span>
+              {todayTotalQueues.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  Belum ada log servis tercatat hari ini.
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {filterBySearch(todayTotalQueues).map((queue) => (
+                    <div
+                      key={queue.id}
+                      className="p-3.5 px-4 md:px-5 flex items-center justify-between gap-3 hover:bg-slate-50/70 transition-colors"
+                    >
+                      {/* Nomor Antrian Sejajar Plat Nomor & Status */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-black text-xs shrink-0">
+                          {queue.queueNumber}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-extrabold text-slate-900 text-xs">{queue.plateNumber}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full capitalize ${
+                              queue.status === 'selesai'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : queue.status === 'proses'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {queue.status}
+                            </span>
+                            <span className="text-[11px] text-slate-500 hidden sm:inline">• {queue.vehicleModel}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                            {queue.customerName} • Mekanik: {queue.mechanicName} • Jam Masuk: {queue.timeIn}
+                          </p>
                         </div>
-                        <p className="text-xs text-slate-600 truncate mt-0.5">
-                          {queue.vehicleModel} • {queue.customerName}
-                        </p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          Mekanik: {queue.mechanicName} • Jam Masuk: {queue.timeIn}
-                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-slate-900 block">
+                          Rp {queue.totalCost.toLocaleString('id-ID')}
+                        </span>
+                        <button
+                          onClick={() => setInvoiceQueue(queue)}
+                          className="text-[11px] font-bold text-emerald-700 hover:underline mt-0.5 inline-block cursor-pointer"
+                        >
+                          Lihat Nota
+                        </button>
                       </div>
                     </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="text-xs font-black text-slate-900 block">
-                        Rp {queue.totalCost.toLocaleString('id-ID')}
-                      </span>
-                      <button
-                        onClick={() => setInvoiceQueue(queue)}
-                        className="text-[11px] font-bold text-emerald-700 hover:underline mt-1 inline-block"
-                      >
-                        Detail Nota
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1132,7 +1201,7 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
       {/* Modal: Tambah Part (Suku Cadang) */}
       {isAddPartModalOpen && selectedQueueForAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md p-5 shadow-2xl border border-slate-100 space-y-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div>
                 <h3 className="font-extrabold text-slate-900 text-sm">Tambah Suku Cadang (Part)</h3>
@@ -1140,7 +1209,7 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
               </div>
               <button
                 onClick={() => setIsAddPartModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1178,13 +1247,13 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
                 <button
                   type="button"
                   onClick={() => setIsAddPartModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#008952] hover:bg-[#007545] text-white font-bold px-5 py-2.5 rounded-xl shadow-sm"
+                  className="bg-[#008952] hover:bg-[#007545] text-white font-bold px-5 py-2.5 rounded-xl shadow-xs cursor-pointer"
                 >
                   Tambahkan ke Servis
                 </button>
@@ -1197,15 +1266,15 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
       {/* Modal: Tambah Jasa Servis (Labor) */}
       {isAddLaborModalOpen && selectedQueueForAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-md p-5 shadow-2xl border border-slate-100 space-y-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <div>
-                <h3 className="font-extrabold text-slate-900 text-sm">Tambah Jasa Servis (Labor)</h3>
+                <h3 className="font-extrabold text-slate-900 text-sm">Tambah Jasa Servis</h3>
                 <p className="text-xs text-slate-400">Unit: {selectedQueueForAction.plateNumber}</p>
               </div>
               <button
                 onClick={() => setIsAddLaborModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1219,7 +1288,7 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
                   required
                   value={laborName}
                   onChange={(e) => setLaborName(e.target.value)}
-                  placeholder="Contoh: Jasa Bersihkan Injektor & Throttle Body"
+                  placeholder="Nama pekerjaan jasa servis"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800"
                 />
               </div>
@@ -1240,13 +1309,13 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
                 <button
                   type="button"
                   onClick={() => setIsAddLaborModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100 cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="bg-[#008952] hover:bg-[#007545] text-white font-bold px-5 py-2.5 rounded-xl shadow-sm"
+                  className="bg-[#008952] hover:bg-[#007545] text-white font-bold px-5 py-2.5 rounded-xl shadow-xs cursor-pointer"
                 >
                   Tambahkan Jasa
                 </button>
@@ -1256,30 +1325,30 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
         </div>
       )}
 
-      {/* Modal: Lihat Nota / Invoice (Bill Detail View) */}
+      {/* Modal: Lihat Nota / Invoice */}
       {invoiceQueue && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
             {/* Invoice Header */}
-            <div className="bg-[#008952] text-white p-5 flex items-center justify-between">
+            <div className="bg-[#008952] text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base leading-tight">Nota Servis & Invoice</h3>
+                  <h3 className="font-black text-sm leading-tight">Nota Servis & Invoice</h3>
                   <p className="text-[11px] text-emerald-100">No. Antrian: {invoiceQueue.queueNumber} • {invoiceQueue.plateNumber}</p>
                 </div>
               </div>
               <button
                 onClick={() => setInvoiceQueue(null)}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Printable Bill Content */}
+            {/* Content */}
             <div id="printable-invoice" className="p-5 overflow-y-auto space-y-4 text-xs text-slate-700">
               <div className="text-center pb-3 border-b border-dashed border-slate-200">
                 <h2 className="font-black text-base text-slate-900 tracking-tight">BENGKEL QU MOTOR</h2>
@@ -1334,10 +1403,10 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
             </div>
 
             {/* Modal Actions: Print & WhatsApp */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="p-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
               <button
                 onClick={() => setInvoiceQueue(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800"
+                className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 cursor-pointer"
               >
                 Tutup
               </button>
@@ -1345,17 +1414,17 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePrintInvoice(invoiceQueue)}
-                  className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 transition-all"
+                  className="bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-xs flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer"
                 >
-                  <Printer className="w-4 h-4" />
+                  <Printer className="w-3.5 h-3.5" />
                   <span>Cetak Nota</span>
                 </button>
 
                 <button
                   onClick={() => handleSendWhatsAppInvoice(invoiceQueue)}
-                  className="bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-sm flex items-center gap-1.5 transition-all"
+                  className="bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                   <span>Kirim WhatsApp</span>
                 </button>
               </div>
@@ -1364,27 +1433,27 @@ Unit Anda telah selesai dikerjakan dan sudah dicek QC. Silakan datang ke kasir B
         </div>
       )}
 
-      {/* Confirmation Modal: Reset Harian (Daily Reset) */}
+      {/* Confirmation Modal: Reset Harian */}
       {showDailyResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 text-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
-              <RotateCcw className="w-6 h-6" />
+          <div className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl border border-slate-100 text-center space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+              <RotateCcw className="w-5 h-5" />
             </div>
-            <h3 className="font-extrabold text-slate-900 text-base">Reset Log Harian?</h3>
+            <h3 className="font-extrabold text-slate-900 text-sm">Reset Log Servis Hari Ini?</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Tindakan ini akan mengosongkan antrian hari ini dan memulai nomor antrian baru dari BQ-01 untuk shift berikutnya.
+              Tindakan ini akan mengosongkan antrian hari ini dan memulai nomor antrian dari BQ-01 untuk shift berikutnya.
             </p>
             <div className="pt-2 flex items-center justify-center gap-2">
               <button
                 onClick={() => setShowDailyResetConfirm(false)}
-                className="px-4 py-2 rounded-xl text-slate-600 font-bold text-xs hover:bg-slate-100"
+                className="px-4 py-2 rounded-xl text-slate-600 font-bold text-xs hover:bg-slate-100 cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={handleManualDailyReset}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-5 py-2 rounded-xl shadow-sm"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs cursor-pointer"
               >
                 Ya, Bersihkan Log
               </button>

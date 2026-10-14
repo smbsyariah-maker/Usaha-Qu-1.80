@@ -39,24 +39,24 @@ export const MENU_MODULES: MenuModuleConfig[] = [
         targetView: 'service-queue'
       },
       {
-        id: 'proses-service',
-        title: 'Proses Service',
+        id: 'proses-servis',
+        title: 'Proses Servis',
         subtitle: 'Pengerjaan & Pergantian Part',
         iconName: 'Cog',
         badge: 'Dikerjakan',
         targetView: 'service-progress'
       },
       {
-        id: 'selesai-service',
-        title: 'Selesai Service',
+        id: 'selesai-servis',
+        title: 'Selesai Servis',
         subtitle: 'Unit Selesai & Cetak Nota / WA',
         iconName: 'CheckCircle2',
         badge: 'Selesai',
         targetView: 'service-completed'
       },
       {
-        id: 'total-service',
-        title: 'Total Service',
+        id: 'total-servis',
+        title: 'Total Servis',
         subtitle: 'Rekap Semua Servis Hari Ini',
         iconName: 'Layers',
         badge: 'Harian',

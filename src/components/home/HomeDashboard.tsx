@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
 import { 
-  Bell, 
   Search, 
   Plus, 
   ArrowUpRight, 
   Clock, 
-  CheckCircle2, 
   Car, 
-  Wrench,
-  Sparkles,
-  ChevronRight,
-  TrendingUp,
-  AlertCircle
+  Wrench, 
+  Sparkles, 
+  ChevronRight, 
+  TrendingUp, 
+  AlertCircle 
 } from 'lucide-react';
 import { MenuModuleConfig, ServiceQueue, WorkshopProfile, UserSession, SubscriptionState } from '../../types';
 import { IconRenderer } from '../common/IconRenderer';
@@ -84,47 +82,17 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium text-emerald-100 uppercase tracking-wider">
-                  Bengkel Qu 1.60
-                </span>
-                <span className="px-2 py-0.5 bg-emerald-700/90 rounded-full text-[9px] font-bold text-emerald-100 border border-emerald-500/50 flex items-center gap-1 shadow-2xs">
-                  <CheckCircle2 className="w-2.5 h-2.5 text-emerald-300" />
-                  <span>Full Versi Aktif</span>
+                <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">
+                  BENGKEL QU
                 </span>
               </div>
               <h2 className="text-lg font-bold text-white tracking-tight leading-tight">
-                Halo, {userSession?.name?.split(' ')[0] || profile?.ownerName?.split(' ')[0] || 'SMB Syariah'} 👋
+                Halo, {userSession?.name?.split(' ')[0] || profile?.ownerName?.split(' ')[0] || 'SMB'} 👋
               </h2>
-              <p className="text-[11px] text-emerald-100/90 font-medium truncate max-w-[200px]">
-                {profile?.workshopName || 'Bengkel Motor Berkah Jaya (Pusat)'}
+              <p className="text-[11px] text-emerald-100/90 font-medium truncate max-w-[260px]">
+                {profile?.workshopName || 'Bengkel Qu Motor Berkah Jaya'}
               </p>
             </div>
-          </div>
-
-          {/* Top Right Action: Notification Icon with Badge & User Profile */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenNotifications}
-              className="relative w-10 h-10 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 flex items-center justify-center transition-all shadow-sm cursor-pointer"
-              aria-label="Lihat Notifikasi"
-            >
-              <Bell className="w-5 h-5 text-white" />
-              {unreadNotifsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-[#008952] animate-bounce">
-                  {unreadNotifsCount}
-                </span>
-              )}
-            </button>
-
-            {userSession && onLogout && (
-              <button
-                onClick={onLogout}
-                title="Keluar / Ganti Akun Google"
-                className="w-10 h-10 rounded-full bg-white text-[#008952] font-black text-xs flex items-center justify-center shadow-sm hover:bg-emerald-50 active:scale-95 transition-all cursor-pointer ring-2 ring-emerald-300/40"
-              >
-                {userSession.name.charAt(0)}
-              </button>
-            )}
           </div>
         </div>
 

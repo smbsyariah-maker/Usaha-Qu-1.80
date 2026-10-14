@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Wifi, BatteryMedium, Signal, Smartphone, Monitor, ShieldCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { Smartphone, Monitor, ShieldCheck } from 'lucide-react';
 
 interface AndroidFrameProps {
   children: React.ReactNode;
@@ -18,19 +18,6 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
 }) => {
   const [isMobileMode, setIsMobileMode] = useState<boolean>(true);
   const [isSafeAreaEnabled, setIsSafeAreaEnabled] = useState<boolean>(true);
-  const [currentTime, setCurrentTime] = useState<string>('09:41');
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setCurrentTime(
-        now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false })
-      );
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <div className="min-h-[100dvh] bg-slate-100 text-slate-800 flex flex-col items-center justify-start p-0 md:py-6 md:px-4">
@@ -85,37 +72,6 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
             : 'max-w-4xl h-[100dvh] md:h-[750px] md:max-h-[88vh] rounded-none md:rounded-2xl shadow-none md:shadow-xl border-0 md:border md:border-slate-200 bg-white overflow-hidden my-auto'
         }`}
       >
-        {/* Android Status Bar (Fixed Top dengan Proteksi Safe Area) */}
-        <div
-          className={`shrink-0 bg-[#008952] text-white px-6 pb-2 flex items-center justify-between text-xs font-semibold select-none border-b border-emerald-600/30 z-30 transition-all ${
-            isSafeAreaEnabled
-              ? 'pt-[max(env(safe-area-inset-top,0px),0.875rem)] md:pt-3'
-              : 'pt-2'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span>{currentTime}</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-200/80" />
-            <span className="text-[10px] text-emerald-100 font-normal">Bengkel Qu</span>
-          </div>
-
-          {/* Speaker / Camera Notch Mockup jika dalam mode frame HP */}
-          {isMobileMode && isSafeAreaEnabled && (
-            <div className="w-24 h-3.5 bg-black/15 rounded-full flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-black/30 border border-emerald-400/20" />
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 text-white/90">
-            <Signal className="w-3.5 h-3.5" />
-            <Wifi className="w-3.5 h-3.5" />
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-bold">98%</span>
-              <BatteryMedium className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
         {/* Application Viewport Container */}
         <div className="relative flex-1 flex flex-col bg-slate-50 overflow-hidden">
           {/* Scrollable Viewport - Terisolasi agar konten tidak pernah menembus status bar maupun navigation bar */}
