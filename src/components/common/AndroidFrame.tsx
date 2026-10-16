@@ -75,7 +75,7 @@ export const AndroidFrame: React.FC<AndroidFrameProps> = ({
         {/* Application Viewport Container */}
         <div className="relative flex-1 flex flex-col bg-slate-50 overflow-hidden">
           {/* Scrollable Viewport - Terisolasi agar konten tidak pernah menembus status bar maupun navigation bar */}
-          <div className={`flex-1 overflow-y-auto overflow-x-hidden flex flex-col bg-slate-50 scrollbar-none ${bottomBar ? 'pb-6' : ''}`}>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col bg-slate-50 scrollbar-none pb-6">
             {children}
           </div>
 

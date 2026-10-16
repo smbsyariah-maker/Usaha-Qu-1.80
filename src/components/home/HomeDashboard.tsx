@@ -28,7 +28,6 @@ interface HomeDashboardProps {
   onLogout?: () => void;
   subscription?: SubscriptionState;
   onOpenSubscription?: () => void;
-  onOpenEcosystemSwitcher?: () => void;
 }
 
 export const HomeDashboard: React.FC<HomeDashboardProps> = ({
@@ -44,8 +43,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   userSession,
   onLogout,
   subscription,
-  onOpenSubscription,
-  onOpenEcosystemSwitcher
+  onOpenSubscription
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -74,36 +72,20 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
         <div className="absolute -left-10 -top-10 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
 
         <div className="relative z-10 flex items-center justify-between">
-          {/* Profile Greeting with Master Switcher on Logo BQ */}
+          {/* Profile Greeting */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onOpenEcosystemSwitcher}
-              className="relative text-left cursor-pointer focus:outline-hidden transition-transform active:scale-95 group"
-              title="Klik Logo BQ untuk Ganti Modul Ekosistem (KedaiQu, KlinikQu, RitelQu, TitipQu)"
-            >
-              <div className="w-12 h-12 rounded-full bg-white text-[#008952] font-black text-lg flex items-center justify-center shadow-md ring-2 ring-emerald-300/40 group-hover:ring-white group-hover:scale-105 transition-all">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full bg-white text-[#008952] font-black text-lg flex items-center justify-center shadow-md ring-2 ring-emerald-300/40">
                 BQ
               </div>
-              <div className="absolute -top-1 -right-1 bg-slate-900 border border-emerald-300 text-[8px] font-black text-emerald-300 px-1 py-0.2 rounded-full shadow-xs uppercase">
-                UQ
-              </div>
               <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 border-2 border-[#008952] rounded-full" />
-            </button>
+            </div>
             <div>
-              <button
-                type="button"
-                onClick={onOpenEcosystemSwitcher}
-                className="flex items-center gap-1.5 text-left cursor-pointer group"
-                title="Buka UsahaQu Master Switcher"
-              >
-                <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider group-hover:text-white transition-colors">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-emerald-100 uppercase tracking-wider">
                   BENGKEL QU
                 </span>
-                <span className="text-[9px] bg-emerald-800/80 text-emerald-200 px-1.5 py-0.2 rounded font-semibold border border-emerald-600/40 group-hover:bg-emerald-700">
-                  Ganti ▾
-                </span>
-              </button>
+              </div>
               <h2 className="text-lg font-bold text-white tracking-tight leading-tight">
                 Halo, {userSession?.name?.split(' ')[0] || profile?.ownerName?.split(' ')[0] || 'SMB'} 👋
               </h2>

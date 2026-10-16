@@ -68,9 +68,6 @@ import { LoginScreen } from './components/auth/LoginScreen';
 import { NewQueueModal } from './components/modals/NewQueueModal';
 import { ReceiptModal } from './components/modals/ReceiptModal';
 import { NotificationDrawer } from './components/modals/NotificationDrawer';
-import { KedaiQuView } from './components/kedai/KedaiQuView';
-import { MasterSwitcherModal, EcosystemId } from './components/common/MasterSwitcherModal';
-import { EcosystemPreviewView } from './components/views/EcosystemPreviewView';
 
 export default function App() {
   // Persistence state
@@ -234,17 +231,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('bq_branches', JSON.stringify(branches));
   }, [branches]);
-
-  // UsahaQu Master Ecosystem State: 'bengkel' | 'kedai' | 'klinik' | 'ritel' | 'titip'
-  const [activeEcosystem, setActiveEcosystem] = useState<EcosystemId>(() => {
-    const saved = localStorage.getItem('uq_active_ecosystem');
-    return (saved as EcosystemId) || 'bengkel';
-  });
-  const [isMasterSwitcherOpen, setIsMasterSwitcherOpen] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem('uq_active_ecosystem', activeEcosystem);
-  }, [activeEcosystem]);
 
   // Navigation state
   // screen: 'dashboard' | 'submenu' | 'feature'
@@ -639,7 +625,6 @@ export default function App() {
           userSession={userSession}
           onLogout={handleLogout}
           subscription={subscription}
-          onOpenEcosystemSwitcher={() => setIsMasterSwitcherOpen(true)}
         />
       );
     }
@@ -956,53 +941,6 @@ export default function App() {
     );
   }
 
-  // UsahaQu Master Ecosystem Routing: Tampilkan KedaiQu (Sidebar Layout) jika dipilih
-  if (activeEcosystem === 'kedai') {
-    return (
-      <AndroidFrame
-        onHomePress={handleGoHome}
-        onBackPress={() => setActiveEcosystem('bengkel')}
-        canGoBack={false}
-      >
-        <KedaiQuView
-          onBackToBengkel={() => setActiveEcosystem('bengkel')}
-          onOpenMasterSwitcher={() => setIsMasterSwitcherOpen(true)}
-        />
-
-        <MasterSwitcherModal
-          isOpen={isMasterSwitcherOpen}
-          onClose={() => setIsMasterSwitcherOpen(false)}
-          activeEcosystem={activeEcosystem}
-          onSelectEcosystem={(eco) => setActiveEcosystem(eco)}
-        />
-      </AndroidFrame>
-    );
-  }
-
-  // Modul Ekosistem Lainnya (KlinikQu, RitelQu, TitipQu)
-  if (activeEcosystem !== 'bengkel') {
-    return (
-      <AndroidFrame
-        onHomePress={handleGoHome}
-        onBackPress={() => setActiveEcosystem('bengkel')}
-        canGoBack={false}
-      >
-        <EcosystemPreviewView
-          ecosystemId={activeEcosystem}
-          onBackToBengkel={() => setActiveEcosystem('bengkel')}
-          onOpenMasterSwitcher={() => setIsMasterSwitcherOpen(true)}
-        />
-
-        <MasterSwitcherModal
-          isOpen={isMasterSwitcherOpen}
-          onClose={() => setIsMasterSwitcherOpen(false)}
-          activeEcosystem={activeEcosystem}
-          onSelectEcosystem={(eco) => setActiveEcosystem(eco)}
-        />
-      </AndroidFrame>
-    );
-  }
-
   return (
     <AndroidFrame
       onHomePress={handleGoHome}
@@ -1044,14 +982,6 @@ export default function App() {
         onClose={() => setIsNotifDrawerOpen(false)}
         notifications={notifications}
         onMarkAllAsRead={handleMarkAllNotifsRead}
-      />
-
-      {/* Master Ecosystem Switcher Modal (Diakses langsung via Logo BQ) */}
-      <MasterSwitcherModal
-        isOpen={isMasterSwitcherOpen}
-        onClose={() => setIsMasterSwitcherOpen(false)}
-        activeEcosystem={activeEcosystem}
-        onSelectEcosystem={(eco) => setActiveEcosystem(eco)}
       />
     </AndroidFrame>
   );
